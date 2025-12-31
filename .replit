@@ -1,6 +1,6 @@
 modules = ["nodejs-20", "python3", "ffmpeg"]
 
-run = "node backend/index.js"
+run = "npm install --prefix backend && node backend/index.js"
 
 [nix]
 channel = "stable-23_11"

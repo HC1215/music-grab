@@ -322,6 +322,8 @@ async function processDownload(jobId, videoId, safeTitle) {
     });
 }
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+    const address = server.address();
+    console.log(`Server is LIVE on ${address.address}:${address.port}`);
+    console.log('App is ready to handle connections!');
 });
