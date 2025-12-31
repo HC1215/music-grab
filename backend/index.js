@@ -36,6 +36,19 @@ if (fs.existsSync(FRONTEND_DIST)) {
     });
 }
 
+// Debug Path Endpoint
+app.get('/api/debug-path', (req, res) => {
+    const info = {
+        cwd: process.cwd(),
+        dirname: __dirname,
+        frontendDist: FRONTEND_DIST,
+        frontendExists: fs.existsSync(FRONTEND_DIST),
+        rootDirFiles: fs.readdirSync(path.join(__dirname, '..')),
+        backendDirFiles: fs.readdirSync(__dirname)
+    };
+    res.json(info);
+});
+
 // List Downloads Endpoint
 app.get('/api/downloads', (req, res) => {
     try {
