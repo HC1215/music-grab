@@ -1,6 +1,6 @@
 modules = ["nodejs-20", "python3", "ffmpeg"]
 
-run = "npm run build && npm start"
+run = "npm start"
 
 [nix]
 channel = "stable-23_11"

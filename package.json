@@ -4,7 +4,7 @@
     "description": "Music Grabber Root",
     "private": true,
     "scripts": {
-        "build": "npm install --prefix frontend && npm run build --prefix frontend && npm install --prefix backend",
-        "start": "cd backend && node index.js"
+        "install": "npm install --prefix backend",
+        "start": "node backend/index.js"
     }
 }

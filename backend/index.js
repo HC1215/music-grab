@@ -23,7 +23,9 @@ app.use('/downloads', express.static(DOWNLOAD_DIR));
 
 // Serve Frontend (Production)
 const FRONTEND_DIST = path.join(__dirname, '../frontend/dist');
+console.log('Checking for frontend at:', FRONTEND_DIST);
 if (fs.existsSync(FRONTEND_DIST)) {
+    console.log('Frontend found! Serving static files.');
     app.use(express.static(FRONTEND_DIST));
     // SPA Fallback: Any route not handled by API should return index.html
     app.get('/{*path}', (req, res, next) => {

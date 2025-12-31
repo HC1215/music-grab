@@ -16,16 +16,11 @@ if %errorlevel% neq 0 (
     exit /b
 )
 
-:: Ask for GitHub Username
-set /p username="Enter your GitHub Username: "
-if "%username%"=="" (
-    echo [ERROR] Username cannot be empty.
-    pause
-    exit /b
-)
+:: Set GitHub Username (NO SPACES, NO QUOTES)
+set "username=hcchang1215"
 
 :: Set remote URL
-set remote_url=https://github.com/%username%/music-grab.git
+set "remote_url=https://github.com/%username%/music-grab.git"
 
 echo.
 echo [Step 1] Setting up remote connection...
@@ -33,14 +28,19 @@ echo [Step 1] Setting up remote connection...
 git remote remove origin >nul 2>&1
 git remote add origin %remote_url%
 
-echo [Step 2] Staging and Committing latest fixes...
-git add .
-git commit -m "Auto-fix: Deployment update"
+echo [Step 2] Building App locally to ensure no cloud errors...
+cd frontend
+cmd /c npm run build
+cd ..
 
-echo [Step 3] Preparing branch...
+echo [Step 3] Staging and Committing everything (including build)...
+git add .
+git commit -m "Deployment fix: Pushing built assets"
+
+echo [Step 4] Preparing branch...
 git branch -M main
 
-echo [Step 4] Pushing to GitHub...
+echo [Step 5] Pushing to GitHub...
 echo (A popup might appear asking you to sign into GitHub)
 echo.
 git push -u origin main
