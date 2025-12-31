@@ -22,7 +22,14 @@ if (!fs.existsSync(DOWNLOAD_DIR)) {
 app.use('/downloads', express.static(DOWNLOAD_DIR));
 
 // Serve Frontend (Production)
-const FRONTEND_DIST = path.join(__dirname, '../frontend/dist');
+let FRONTEND_DIST = path.join(__dirname, '../frontend/dist');
+if (!fs.existsSync(FRONTEND_DIST)) {
+    FRONTEND_DIST = path.join(process.cwd(), 'frontend/dist');
+}
+if (!fs.existsSync(FRONTEND_DIST)) {
+    FRONTEND_DIST = path.join(process.cwd(), 'dist');
+}
+
 console.log('Checking for frontend at:', FRONTEND_DIST);
 if (fs.existsSync(FRONTEND_DIST)) {
     console.log('Frontend found! Serving static files.');

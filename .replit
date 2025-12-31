@@ -1,6 +1,6 @@
 modules = ["nodejs-20", "python3", "ffmpeg"]
 
-run = "npm start"
+run = "git pull origin main && npm install --prefix backend && node backend/index.js"
 
 [nix]
 channel = "stable-23_11"

@@ -1,10 +1,15 @@
 {
-    "name": "music-grab-root",
+    "name": "music-grab",
     "version": "1.0.0",
-    "description": "Music Grabber Root",
-    "private": true,
+    "description": "Music Grabber",
+    "main": "backend/index.js",
     "scripts": {
-        "install": "npm install --prefix backend",
-        "start": "node backend/index.js"
+        "start": "node backend/index.js",
+        "install": "npm install --prefix backend"
+    },
+    "dependencies": {
+        "express": "^5.2.1",
+        "cors": "^2.8.5",
+        "yt-search": "^2.13.1"
     }
 }
