@@ -17,7 +17,7 @@ if %errorlevel% neq 0 (
 )
 
 :: Set GitHub Username (NO SPACES, NO QUOTES)
-set "username=hcchang1215"
+set "username=HC1215"
 
 :: Set remote URL
 set "remote_url=https://github.com/%username%/music-grab.git"
