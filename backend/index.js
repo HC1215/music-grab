@@ -4,7 +4,8 @@ const ytSearch = require('yt-search');
 const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
-const ffmpegPath = require('ffmpeg-static');
+const ffmpegStatic = require('ffmpeg-static');
+const ffmpegPath = ffmpegStatic && fs.existsSync(ffmpegStatic) ? ffmpegStatic : 'ffmpeg';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -25,7 +26,7 @@ const FRONTEND_DIST = path.join(__dirname, '../frontend/dist');
 if (fs.existsSync(FRONTEND_DIST)) {
     app.use(express.static(FRONTEND_DIST));
     // SPA Fallback: Any route not handled by API should return index.html
-    app.get('*', (req, res, next) => {
+    app.get('/{*path}', (req, res, next) => {
         if (req.url.startsWith('/api/') || req.url.startsWith('/downloads/')) {
             return next();
         }

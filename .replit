@@ -1,0 +1,9 @@
+modules = ["nodejs-20", "python3", "ffmpeg"]
+
+run = "npm start"
+
+[nix]
+channel = "stable-23_11"
+
+[ports]
+95a4ff3b-9cf2-453a-9e1e-3f83390d8841 = { localPort = 3001, externalPort = 80 }

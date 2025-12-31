@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Search, Download, Play, Music, Library, X, Save, Pause, Trash2, Folder as FolderIcon, FolderPlus, ArrowLeft, Mic2, Check, Square, RefreshCw, Upload } from 'lucide-react';
+import { Search, Download, Play, Music, Library, X, Save, Pause, Trash2, Folder as FolderIcon, FolderPlus, ArrowLeft, Mic2, Check, Square, RefreshCw, Upload, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { saveTrack, getFolders, getTracksByFolder, deleteFolder, createFolder, deleteTrack, type SavedTrack, type Folder } from './db';
 
@@ -131,6 +131,18 @@ function App() {
   const [results, setResults] = useState<Video[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Settings State
+  const [showSettings, setShowSettings] = useState(false);
+  const [apiBase, setApiBase] = useState(localStorage.getItem('music-grab-api-base') || '');
+
+  const API_BASE = apiBase;
+
+  // Persist API Base
+  useEffect(() => {
+    localStorage.setItem('music-grab-api-base', apiBase);
+  }, [apiBase]);
+
+
   // Player Progress State
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -225,18 +237,24 @@ function App() {
     setLibraryTracks(loadedTracks.reverse());
   };
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!query.trim()) return;
 
     setLoading(true);
-    setPreviewTrack(null);
     try {
-      const res = await axios.get(`/api/search?q=${encodeURIComponent(query)}`);
-      setResults(res.data);
+      const response = await axios.get(`${API_BASE}/api/search?q=${encodeURIComponent(query)}`);
+      if (Array.isArray(response.data)) {
+        setResults(response.data);
+      } else {
+        console.error('Invalid search response:', response.data);
+        setResults([]);
+        showToast('Search failed: Unexpected response from server', 'error');
+      }
     } catch (err) {
       console.error(err);
-      showToast("Search failed. Please check your connection.", 'error');
+      showToast('Connection error. Is the backend running?', 'error');
+      setResults([]);
     } finally {
       setLoading(false);
     }
@@ -541,6 +559,13 @@ function App() {
             <Library size={16} /> <span className="hidden sm:inline">Library</span>
           </button>
         </nav>
+
+        <button
+          onClick={() => setShowSettings(true)}
+          className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all"
+        >
+          <Settings size={20} />
+        </button>
       </header>
 
       {/* Rename Modal */}
@@ -575,7 +600,7 @@ function App() {
                     className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 outline-none appearance-none"
                   >
                     <option value="">My Library (Root)</option>
-                    {folders.map(f => (
+                    {Array.isArray(folders) && folders.map(f => (
                       <option key={f.id} value={f.id}>{f.name}</option>
                     ))}
                   </select>
@@ -629,6 +654,57 @@ function App() {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {showSettings && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass-panel w-full max-w-sm p-6 bg-[#1a1a23]"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-white">Settings</h3>
+                <button onClick={() => setShowSettings(false)} className="text-gray-500 hover:text-white">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Backend API URL</label>
+                  <input
+                    type="text"
+                    placeholder="http://192.168.x.x:3001"
+                    value={apiBase}
+                    onChange={(e) => setApiBase(e.target.value)}
+                    className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 outline-none mb-1"
+                  />
+                  <p className="text-[10px] text-gray-500">
+                    Use your PC's IP address to search/download from your phone.
+                    Leave empty if running locally on PC.
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t border-white/5">
+                  <button
+                    onClick={() => {
+                      if (confirm("Reset everything? This will clear all downloaded songs.")) {
+                        indexedDB.deleteDatabase('music-grab-db-clean-v4');
+                        window.location.reload();
+                      }
+                    }}
+                    className="w-full py-2 text-xs text-red-400/60 hover:text-red-400 hover:bg-red-400/5 rounded-lg transition-all"
+                  >
+                    Clear All Cache & Library
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
 
       {/* Content Area */}
       <div className="max-w-3xl mx-auto px-4">
@@ -659,7 +735,7 @@ function App() {
             </form>
 
             <div className="space-y-3">
-              {results.map((video, idx) => (
+              {Array.isArray(results) && results.map((video, idx) => (
                 <motion.div
                   key={video.id}
                   initial={{ opacity: 0, y: 10 }}
@@ -825,7 +901,7 @@ function App() {
             {/* Folders Grid (Only show in Root) */}
             {!currentFolderId && folders.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-                {folders.map(folder => (
+                {Array.isArray(folders) && folders.map(folder => (
                   <div
                     key={folder.id}
                     onClick={() => setCurrentFolderId(folder.id)}
@@ -853,7 +929,7 @@ function App() {
               </div>
             ) : (
               <div className="space-y-4 mb-32">
-                {libraryTracks.map((track) => {
+                {Array.isArray(libraryTracks) && libraryTracks.map((track) => {
                   const isCurrent = currentTrack?.id === track.id;
                   const isThisPlaying = isCurrent && isPlaying;
 
@@ -998,7 +1074,7 @@ function App() {
                 className="max-w-2xl w-full max-h-[70vh] overflow-y-auto custom-scrollbar text-left space-y-4 px-4"
                 onClick={(e) => e.stopPropagation()}
               >
-                {parsedLyrics.map((line, idx) => {
+                {Array.isArray(parsedLyrics) && parsedLyrics.map((line, idx) => {
                   // Basic approximate progress for styling if current line
                   const isCurrent = currentLyricIndex === idx;
 
