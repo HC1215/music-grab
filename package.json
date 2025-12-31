@@ -1,22 +1,15 @@
 {
-    "name": "music-grab",
-    "version": "1.2.0",
-    "description": "Standalone Music Grabber",
-    "main": "backend/index.js",
+    "name": "music-grab-standalone",
+    "version": "2.0.0",
+    "main": "index.js",
     "scripts": {
-        "start": "node backend/index.js",
-        "install-deps": "npm install --prefix backend && npm install --prefix frontend",
-        "build": "cd frontend && npm install && npm run build"
+        "start": "node index.js",
+        "build": "npm install && cd frontend && npm install && npm run build && cp -r dist ../"
     },
     "dependencies": {
-        "express": "^5.2.1",
+        "express": "^4.18.2",
         "cors": "^2.8.5",
         "yt-search": "^2.13.1",
-        "axios": "^1.6.2",
-        "body-parser": "^2.2.1",
         "ffmpeg-static": "^5.3.0"
-    },
-    "engines": {
-        "node": ">=20.0.0"
     }
 }

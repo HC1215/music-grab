@@ -1,10 +1,10 @@
 modules = ["nodejs-20", "python3", "ffmpeg"]
 
-run = "npm install --prefix backend && node backend/index.js"
+run = "npm start"
 
 [nix]
 channel = "stable-23_11"
 
 [ports]
-localPort = 3001
+localPort = 3000
 externalPort = 80
