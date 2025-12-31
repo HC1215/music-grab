@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const ytSearch = require('yt-search');
+const { exec } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,29 +11,40 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Health check that MUST work
-app.get('/health', (req, res) => res.send('Standalone Engine is ACTIVE'));
+// 1. Serve Downloaded Music
+const DOWNLOADS = path.join(__dirname, 'downloads');
+if (!fs.existsSync(DOWNLOADS)) fs.mkdirSync(DOWNLOADS);
+app.use('/downloads', express.static(DOWNLOADS));
 
-// Serve Frontend from 'dist' folder in root
-const DIST_PATH = path.join(__dirname, 'dist');
-if (fs.existsSync(DIST_PATH)) {
-    app.use(express.static(DIST_PATH));
+// 2. Serve the Player (Frontend)
+const UI = path.join(__dirname, 'frontend/dist');
+if (fs.existsSync(UI)) {
+    app.use(express.static(UI));
 }
 
-// Minimal API for Search (redirecting to backend logic)
-app.get('/api/search', (req, res) => {
-    // Basic response to prove it works
-    res.json([{ id: 'test', title: 'Server is Connected!', author: 'Assistant' }]);
+// 3. The Search Engine
+app.get('/api/search', async (req, res) => {
+    try {
+        const { q } = req.query;
+        const r = await ytSearch(q);
+        res.json(r.videos.slice(0, 10));
+    } catch (e) {
+        res.status(500).send(e.message);
+    }
 });
 
+// 4. Health Check
+app.get('/health', (req, res) => res.send('System Online'));
+
+// 5. Fallback for Phone
 app.get('*', (req, res) => {
-    if (fs.existsSync(path.join(DIST_PATH, 'index.html'))) {
-        res.sendFile(path.join(DIST_PATH, 'index.html'));
+    if (fs.existsSync(path.join(UI, 'index.html'))) {
+        res.sendFile(path.join(UI, 'index.html'));
     } else {
-        res.send('<h1>App is Loading...</h1><p>Please wait 1 minute for the build to finish.</p>');
+        res.send('<h1>Setting up app...</h1><p>Please refresh in 10 seconds.</p>');
     }
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`Music App ready on port ${PORT}`);
 });
