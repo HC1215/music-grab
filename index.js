@@ -9,7 +9,8 @@ const ffmpegStatic = require('ffmpeg-static');
 // Configuration
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DOWNLOAD_DIR = path.join(__dirname, 'downloads');
+// Use /tmp for downloads in cloud environments
+const DOWNLOAD_DIR = process.env.NODE_ENV === 'production' ? '/tmp/downloads' : path.join(__dirname, 'downloads');
 const UI_DIST = path.join(__dirname, 'frontend/dist');
 const ffmpegPath = ffmpegStatic && fs.existsSync(ffmpegStatic) ? ffmpegStatic : 'ffmpeg';
 
