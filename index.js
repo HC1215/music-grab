@@ -173,6 +173,14 @@ async function processDownload(jobId, videoId, safeTitle) {
                 lyrics,
                 metadata: { size: stats.size, downloadDate: Date.now() }
             };
+
+            // Cleanup server file after reading into memory
+            try {
+                fs.unlinkSync(finalAudioPath);
+                const vttFile = fs.readdirSync(DOWNLOAD_DIR).find(f => f.includes(videoId) && f.endsWith('.vtt'));
+                if (vttFile) fs.unlinkSync(path.join(DOWNLOAD_DIR, vttFile));
+            } catch (e) { console.error("Cleanup error", e); }
+
         } catch (err) {
             job.status = 'error';
             job.error = 'Failed to process file';

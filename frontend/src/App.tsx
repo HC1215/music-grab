@@ -359,7 +359,18 @@ function App() {
 
             await loadLibrary();
             setDownloadStatus(prev => ({ ...prev, [video.id]: 'success' }));
-            showToast(`${finalTitle} saved to library!`, 'success');
+
+            // AUTOMATIC DOWNLOAD TO DEVICE
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${finalTitle.replace(/[<>:"/\\|?*]+/g, '_')}.mp3`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast(`${finalTitle} saved to library & device!`, 'success');
 
             // Clear success status after 3s
             setTimeout(() => {
