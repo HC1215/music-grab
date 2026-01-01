@@ -134,13 +134,27 @@ function App() {
   // Settings State
   const [showSettings, setShowSettings] = useState(false);
   const [apiBase, setApiBase] = useState(localStorage.getItem('music-grab-api-base') || '');
+  const [backendStatus, setBackendStatus] = useState<'online' | 'offline' | 'checking'>('checking');
 
   const API_BASE = apiBase;
 
-  // Persist API Base
+  // Persist API Base and Check Status
   useEffect(() => {
     localStorage.setItem('music-grab-api-base', apiBase);
+    checkBackend();
   }, [apiBase]);
+
+  const checkBackend = async () => {
+    setBackendStatus('checking');
+    try {
+      // If apiBase is empty, we check the relative /health (Cloud Backend)
+      const testUrl = apiBase ? `${apiBase}/health` : '/health';
+      await axios.get(testUrl, { timeout: 3000 });
+      setBackendStatus('online');
+    } catch (e) {
+      setBackendStatus('offline');
+    }
+  };
 
 
   // Player Progress State
@@ -244,16 +258,31 @@ function App() {
     setLoading(true);
     try {
       const response = await axios.get(`${API_BASE}/api/search?q=${encodeURIComponent(query)}`);
+
+      // If Firebase Hosting returns index.html for a 404
+      if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
+        setResults([]);
+        showToast('Backend connection needed. Visit Settings.', 'error');
+        setBackendStatus('offline');
+        return;
+      }
+
       if (Array.isArray(response.data)) {
         setResults(response.data);
+        setBackendStatus('online');
       } else {
         console.error('Invalid search response:', response.data);
         setResults([]);
-        showToast('Search failed: Unexpected response from server', 'error');
+        showToast('Search failed: Unexpected response', 'error');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast('Connection error. Is the backend running?', 'error');
+      if (err.code === 'ERR_NETWORK') {
+        showToast('Cannot reach backend. Check your local IP in Settings.', 'error');
+      } else {
+        showToast('Connection error. Is the backend running?', 'error');
+      }
+      setBackendStatus('offline');
       setResults([]);
     } finally {
       setLoading(false);
@@ -478,6 +507,18 @@ function App() {
     }
   };
 
+  const handleDownloadToDevice = (track: SavedTrack) => {
+    const url = URL.createObjectURL(track.blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${track.title.replace(/[<>:"/\\|?*]+/g, '_')}.mp3`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Saving to device...', 'success');
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -529,18 +570,22 @@ function App() {
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       </AnimatePresence>
       {/* Background Elements */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-purple-900/20 blur-[100px]" />
-        <div className="absolute top-[40%] -right-[10%] w-[40%] h-[60%] rounded-full bg-indigo-900/20 blur-[100px]" />
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+        <div className="bg-blur-circle top-[-10%] left-[-5%] w-[40%] h-[40%] bg-indigo-600/20" />
+        <div className="bg-blur-circle top-[30%] right-[-10%] w-[50%] h-[50%] bg-purple-600/20" />
+        <div className="bg-blur-circle bottom-[-10%] left-[20%] w-[30%] h-[35%] bg-blue-600/10" />
       </div>
 
       {/* Header */}
       <header className="glass-panel sticky top-4 z-[70] mx-4 px-6 py-4 flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20 relative">
             <Music className="text-white" size={24} />
+            <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-[#1a1a23] ${backendStatus === 'online' ? 'bg-green-500' :
+              backendStatus === 'checking' ? 'bg-yellow-500 animate-pulse' : 'bg-red-500'
+              }`} title={`Backend: ${backendStatus}`} />
           </div>
-          <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+          <h1 className="text-xl font-bold premium-gradient-text">
             MusicGrab
           </h1>
         </div>
@@ -672,17 +717,23 @@ function App() {
 
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Backend API URL</label>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-sm text-gray-400">Backend API URL</label>
+                    <div className={`text-[10px] px-2 py-0.5 rounded-full border ${backendStatus === 'online' ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'
+                      }`}>
+                      {backendStatus === 'online' ? 'Connected' : 'Disconnected'}
+                    </div>
+                  </div>
                   <input
-                    type="text"
-                    placeholder="http://192.168.x.x:3001"
+                    type="url"
+                    placeholder="http://192.168.1.10:3001"
                     value={apiBase}
                     onChange={(e) => setApiBase(e.target.value)}
-                    className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 outline-none mb-1"
+                    className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white focus:border-indigo-500 outline-none mb-2"
                   />
-                  <p className="text-[10px] text-gray-500">
-                    Use your PC's IP address to search/download from your phone.
-                    Leave empty if running locally on PC.
+                  <p className="text-[11px] text-gray-500 leading-relaxed">
+                    To search/download on mobile, enter your computer's <b>Local IP address</b> (e.g. http://192.168.x.x:3001).
+                    Run the backend on your PC first!
                   </p>
                 </div>
 
@@ -1003,8 +1054,17 @@ function App() {
                           <button
                             onClick={(e) => handleDeleteTrack(track.id, e)}
                             className="p-2 text-gray-500 hover:text-red-400 transition-colors rounded-full hover:bg-white/5"
+                            title="Delete"
                           >
                             <Trash2 size={16} />
+                          </button>
+
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDownloadToDevice(track); }}
+                            className="p-2 text-indigo-400 hover:text-white transition-colors rounded-full hover:bg-white/5"
+                            title="Save to Device"
+                          >
+                            <Download size={18} />
                           </button>
                         </div>
                       </div>
