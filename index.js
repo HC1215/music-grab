@@ -6,6 +6,7 @@ const ytSearch = require('yt-search');
 const { spawn } = require('child_process');
 const ffmpegStatic = require('ffmpeg-static');
 const dns = require('dns');
+const axios = require('axios');
 
 // Configuration
 const app = express();
@@ -50,22 +51,71 @@ app.get('/api/search', async (req, res) => {
         const { q } = req.query;
         if (!q) return res.status(400).json({ error: 'Query parameter "q" is required' });
 
-        const r = await ytSearch(q);
-        const videos = r.videos.slice(0, 15).map(v => ({
-            id: v.videoId,
-            url: v.url,
-            title: v.title,
-            timestamp: v.timestamp,
-            seconds: v.seconds,
-            thumbnail: v.thumbnail,
-            author: v.author.name
-        }));
-        res.json(videos);
+        console.log(`Search request for: "${q}"`);
+
+        try {
+            // Plan A: yt-search (Direct YouTube)
+            const r = await ytSearch(q);
+            const videos = r.videos.slice(0, 15).map(v => ({
+                id: v.videoId,
+                url: v.url,
+                title: v.title,
+                timestamp: v.timestamp,
+                seconds: v.seconds,
+                thumbnail: v.thumbnail,
+                author: v.author.name
+            }));
+            return res.json(videos);
+        } catch (ytError) {
+            console.warn('Plan A (yt-search) failed, trying Plan B (Invidious):', ytError.message);
+
+            // Plan B: Invidious Instances Fallback
+            const instances = [
+                'https://vid.puffyan.us',
+                'https://yewtu.be',
+                'https://invidious.snopyta.org',
+                'https://inv.riverside.rocks'
+            ];
+
+            for (const instance of instances) {
+                try {
+                    console.log(`Trying Invidious instance: ${instance}`);
+                    const response = await axios.get(`${instance}/api/v1/search`, {
+                        params: { q, type: 'video' },
+                        timeout: 5000
+                    });
+
+                    if (Array.isArray(response.data)) {
+                        const videos = response.data.slice(0, 15).map(v => ({
+                            id: v.videoId,
+                            url: `https://www.youtube.com/watch?v=${v.videoId}`,
+                            title: v.title,
+                            timestamp: formatSeconds(v.lengthSeconds),
+                            seconds: v.lengthSeconds,
+                            thumbnail: v.videoThumbnails?.[0]?.url || '',
+                            author: v.author
+                        }));
+                        console.log(`Success with ${instance}`);
+                        return res.json(videos);
+                    }
+                } catch (e) {
+                    console.error(`Invidious instance ${instance} failed:`, e.message);
+                }
+            }
+            throw new Error('All search methods failed');
+        }
     } catch (e) {
         console.error('Search error:', e);
         res.status(500).json({ error: 'Search failed' });
     }
 });
+
+function formatSeconds(seconds) {
+    if (!seconds) return "0:00";
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+}
 
 // 4. Download Job Store
 const activeDownloads = new Map();
