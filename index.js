@@ -11,8 +11,22 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 // Use /tmp for downloads in cloud environments
 const DOWNLOAD_DIR = process.env.NODE_ENV === 'production' ? '/tmp/downloads' : path.join(__dirname, 'downloads');
-const UI_DIST = path.join(__dirname, 'frontend/dist');
-const ffmpegPath = ffmpegStatic && fs.existsSync(ffmpegStatic) ? ffmpegStatic : 'ffmpeg';
+// Fallback to relative paths if environment isn't production
+const UI_DIST = process.env.NODE_ENV === 'production'
+    ? path.join(process.cwd(), 'frontend/dist')
+    : path.join(__dirname, 'frontend/dist');
+
+// Improved ffmpeg path detection
+let ffmpegPath = 'ffmpeg';
+if (ffmpegStatic && fs.existsSync(ffmpegStatic)) {
+    ffmpegPath = ffmpegStatic;
+}
+console.log('--- Deployment Info ---');
+console.log('Working Directory:', process.cwd());
+console.log('UI Dist Path:', UI_DIST);
+console.log('UI Dist Exists:', fs.existsSync(UI_DIST));
+console.log('FFmpeg Path:', ffmpegPath);
+console.log('-----------------------');
 
 // Middleware
 app.use(cors());
@@ -191,14 +205,24 @@ async function processDownload(jobId, videoId, safeTitle) {
 
 // 6. Serve Frontend (SPA Fallback)
 if (fs.existsSync(UI_DIST)) {
+    console.log('Serving frontend from:', UI_DIST);
     app.use(express.static(UI_DIST));
+
+    // SPA Fallback: Redirect all non-API/non-download requests to index.html
     app.get('*', (req, res) => {
-        if (req.path.startsWith('/api') || req.path.startsWith('/downloads')) return;
+        if (req.path.startsWith('/api') || req.path.startsWith('/downloads')) {
+            return res.status(404).json({ error: 'Endpoint not found' });
+        }
         res.sendFile(path.join(UI_DIST, 'index.html'));
     });
 } else {
+    console.warn('Frontend dist folder NOT found at:', UI_DIST);
     app.get('*', (req, res) => {
-        res.send('<h1>Setting up...</h1><p>Please build the frontend or wait a moment.</p>');
+        res.status(500).send(`
+            <h1>Environment Error</h1>
+            <p>Frontend dist folder not found.</p>
+            <p>Expected path: ${UI_DIST}</p>
+        `);
     });
 }
 
