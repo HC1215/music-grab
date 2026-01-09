@@ -121,7 +121,7 @@ app.get('/api/debug-path', (req, res) => {
 // DNS Test Endpoint
 app.get('/api/test-dns', async (req, res) => {
     const results = {};
-    const hosts = ['google.com', 'youtube.com', 'huggingface.co', 'github.com'];
+    const hosts = ['google.com', 'youtube.com', 'www.youtube.com', 'huggingface.co', 'github.com'];
 
     for (const host of hosts) {
         try {
@@ -134,6 +134,21 @@ app.get('/api/test-dns', async (req, res) => {
         }
     }
     res.json(results);
+});
+
+// yt-dlp Search Test
+app.get('/api/test-ytdlp', (req, res) => {
+    const pyCommand = process.platform === 'win32' ? 'python' : 'python3';
+    const child = spawn(pyCommand, ['-m', 'yt_dlp', '--dump-json', 'ytsearch1:test']);
+    let output = '';
+    let error = '';
+
+    child.stdout.on('data', (data) => output += data.toString());
+    child.stderr.on('data', (data) => error += data.toString());
+
+    child.on('close', (code) => {
+        res.json({ code, output: output ? JSON.parse(output.split('\n')[0]) : null, error });
+    });
 });
 
 // List Downloads
