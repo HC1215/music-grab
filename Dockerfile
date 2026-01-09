@@ -18,25 +18,25 @@ RUN apt-get update && \
 # Install yt-dlp globally
 RUN pip3 install yt-dlp --break-system-packages
 
-# Create a non-root user (Hugging Face requirement)
-RUN useradd -m -u 1000 user
-USER user
-ENV HOME=/home/user
-ENV PATH=/home/user/.local/bin:$PATH
+# The node:slim image already has a 'node' user with UID 1000
+USER node
+ENV HOME=/home/node
+ENV PATH=$HOME/.local/bin:$PATH
 
 WORKDIR $HOME/app
 
 # Copy root package files
-COPY --chown=user package.json ./
+COPY --chown=node package.json ./
 RUN npm install --production
 
 # Copy built frontend
-COPY --chown=user --from=frontend-builder /app/frontend/dist ./frontend/dist
+COPY --chown=node --from=frontend-builder /app/frontend/dist ./frontend/dist
 
 # Copy backend files
-COPY --chown=user index.js ./
+COPY --chown=node index.js ./
 
 # Create downloads folder in /tmp and set permissions
+# Note: /tmp is usually world-writable, but we ensure it works for our user
 RUN mkdir -p /tmp/downloads && chmod 777 /tmp/downloads
 
 ENV NODE_ENV=production
