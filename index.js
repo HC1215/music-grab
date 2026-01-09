@@ -121,7 +121,7 @@ app.get('/api/debug-path', (req, res) => {
 // DNS Test Endpoint
 app.get('/api/test-dns', async (req, res) => {
     const results = {};
-    const hosts = ['google.com', 'youtube.com', 'www.youtube.com', 'huggingface.co', 'github.com'];
+    const hosts = ['google.com', 'youtube.com', 'www.youtube.com', 'huggingface.co', 'github.com', 'invidious.io'];
 
     for (const host of hosts) {
         try {
