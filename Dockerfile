@@ -1,8 +1,9 @@
 # --- STAGE 1: Build Frontend ---
 FROM node:20-slim AS frontend-builder
 WORKDIR /app/frontend
+# Copy package files first to leverage Docker cache
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
@@ -26,8 +27,8 @@ ENV PATH=$HOME/.local/bin:$PATH
 WORKDIR $HOME/app
 
 # Copy root package files
-COPY --chown=node package.json ./
-RUN npm install --production
+COPY --chown=node package.json package-lock.json* ./
+RUN npm ci --production || npm install --production
 
 # Copy built frontend
 COPY --chown=node --from=frontend-builder /app/frontend/dist ./frontend/dist
