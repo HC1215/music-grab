@@ -5,6 +5,7 @@ const fs = require('fs');
 const ytSearch = require('yt-search');
 const { spawn } = require('child_process');
 const ffmpegStatic = require('ffmpeg-static');
+const dns = require('dns');
 
 // Configuration
 const app = express();
@@ -104,6 +105,35 @@ app.get('/api/download/result/:id', (req, res) => {
 
     res.json(job.result);
     setTimeout(() => activeDownloads.delete(req.params.id), 30000);
+});
+
+// Debug Path Endpoint
+app.get('/api/debug-path', (req, res) => {
+    const info = {
+        cwd: process.cwd(),
+        dirname: __dirname,
+        frontendDist: UI_DIST,
+        frontendExists: fs.existsSync(UI_DIST),
+    };
+    res.json(info);
+});
+
+// DNS Test Endpoint
+app.get('/api/test-dns', async (req, res) => {
+    const results = {};
+    const hosts = ['google.com', 'youtube.com', 'huggingface.co', 'github.com'];
+
+    for (const host of hosts) {
+        try {
+            const addresses = await new Promise((resolve, reject) => {
+                dns.resolve4(host, (err, addrs) => err ? reject(err) : resolve(addrs));
+            });
+            results[host] = { status: 'OK', addresses };
+        } catch (e) {
+            results[host] = { status: 'ERROR', message: e.message };
+        }
+    }
+    res.json(results);
 });
 
 // List Downloads
